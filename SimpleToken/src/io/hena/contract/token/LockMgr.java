@@ -155,7 +155,6 @@ class LockMgr {
     }
 
     protected boolean removeLock(int lockType, @Required Address targetAddress, @Required long endTime) {
-        requireManager(Msg.sender());
         List<TimeLock> lockList = locks.get(targetAddress);
         require(lockList != null);
         boolean isChange = false;
@@ -170,6 +169,7 @@ class LockMgr {
 
         return true;
     }
+
 
     @View
     public String getLockState(@Required Address address) {

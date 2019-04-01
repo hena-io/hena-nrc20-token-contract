@@ -206,14 +206,14 @@ public class HenaToken extends LockMgr implements Contract, Token {
 
         return true;
     }
-    protected boolean removeLockNormal(@Required Address targetAddress, @Required long endTime) {
+
+    public boolean removeLockNormal(@Required Address targetAddress, @Required long endTime) {
         requireManager(Msg.sender());
         removeLock(LOCK_TYPE_NORMAL, targetAddress, endTime);
         return true;
     }
 
     public boolean addLockStake(@Required String endTime, @Required BigInteger value) {
-        check(balanceOf(Msg.sender()));
         check(value);
         addLock(LOCK_TYPE_STAKE, Msg.sender(), value, Block.timestamp(), Long.parseLong(endTime), 100);
         return true;
@@ -222,6 +222,7 @@ public class HenaToken extends LockMgr implements Contract, Token {
         removeLock(LOCK_TYPE_STAKE, Msg.sender(), endTime);
         return true;
     }
+
 
 
 }
