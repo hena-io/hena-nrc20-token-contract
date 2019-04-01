@@ -21,8 +21,11 @@ class LockMgr {
     private Address manager;
 
     private boolean availableTransferOwner = true;
-
     private boolean stopTranser = false;
+
+
+    protected int LOCK_TYPE_NORMAL = 1;
+    protected int LOCK_TYPE_STAKE = 2;
 
     private class LockUserInfo {
         boolean totalLocked = false;
@@ -30,32 +33,26 @@ class LockMgr {
 
         @Override
         public String toString() {
-            return String.format("{totalLocked:%s,tag:%s}", totalLocked, tag);
+            return "{totalLocked:" + totalLocked + ",tag:" + tag + "}";
         }
     }
 
     public class TimeLock {
+        int lockType;
         long startTime;
         long endTime;
         BigInteger lockedBalance;
 
-        public TimeLock(long startTime, long endTime, BigInteger lockedBalance) {
-
+        public TimeLock(int lockType, long startTime, long endTime, BigInteger lockedBalance) {
+            this.lockType = lockType;
             this.startTime = startTime;
             this.endTime = endTime;
             this.lockedBalance = lockedBalance;
         }
 
-        public boolean equal(TimeLock lock) {
-
-            if (this.endTime != lock.endTime)
-                return false;
-            return true;
-        }
-
         @Override
         public String toString() {
-            return String.format("{startTime:%s,endTime:%s,lockedBalance:%s}", startTime, endTime, lockedBalance);
+            return "{lockType:" + lockType +",startTime:" + startTime + ",endTime:" + endTime + ",lockedBalance:" + lockedBalance.toString() + "}";
         }
     }
 
@@ -141,7 +138,7 @@ class LockMgr {
         return true;
     }
 
-    protected boolean addLock(Address targetAddress, BigInteger balance, long startTime, long endTime, int persentage) {
+    protected boolean addLock(int lockType, Address targetAddress, BigInteger balance, long startTime, long endTime, int persentage) {
         require(persentage > 0 && persentage <= 100);
         require(getTime() < endTime);
 
@@ -152,18 +149,18 @@ class LockMgr {
         }
 
         BigInteger lockBalance = balance.multiply(BigInteger.valueOf(persentage)).divide(BigInteger.valueOf(100));
-        lockList.add(new TimeLock(startTime, endTime, lockBalance));
+        lockList.add(new TimeLock(lockType, startTime, endTime, lockBalance));
 
         return true;
     }
 
-    public boolean removeLock(@Required Address targetAddress, @Required int endTime) {
+    protected boolean removeLock(int lockType, @Required Address targetAddress, @Required long endTime) {
         requireManager(Msg.sender());
         List<TimeLock> lockList = locks.get(targetAddress);
         require(lockList != null);
         boolean isChange = false;
         for (int i = lockList.size() - 1; i >= 0; i--) {
-            if (lockList.get(i).endTime == endTime) {
+            if (lockList.get(i).endTime == endTime && lockList.get(i).lockType == lockType) {
                 lockList.remove(i);
                 isChange = true;
             }
@@ -179,11 +176,10 @@ class LockMgr {
         String result = "";
         LockUserInfo userInfo = lockUserInfos.get(address);
         if (userInfo != null) {
-            result += String.format("userinfo:%s", userInfo.toString());
+            result += "userinfo:" + userInfo.toString();
         }
-
         List<TimeLock> lockList = locks.get(address);
-        if (lockList != null) {
+        if (lockList != null && lockList.size() > 0) {
             String lockStr = "";
             for (int i = 0; i < lockList.size(); i++) {
                 if (i > 0) {
@@ -193,12 +189,12 @@ class LockMgr {
             }
             if (userInfo != null)
                 result += ",";
-            result += String.format("locks:%s", lockStr);
+            result += "locks:" + lockStr;
         }
 
         if (result.isEmpty())
             return "";
-        return String.format("{%s}", result);
+        return "{" + result + "}";
     }
 
     @View

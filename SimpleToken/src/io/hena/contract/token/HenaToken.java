@@ -1,6 +1,7 @@
 package io.hena.contract.token;
 
 import io.nuls.contract.sdk.Address;
+import io.nuls.contract.sdk.Block;
 import io.nuls.contract.sdk.Contract;
 import io.nuls.contract.sdk.Msg;
 import io.nuls.contract.sdk.annotation.Required;
@@ -18,7 +19,7 @@ public class HenaToken extends LockMgr implements Contract, Token {
     private final String name;
     private final String symbol;
     private final int decimals;
-    private BigInteger totalSupply = BigInteger.ZERO;
+    private BigInteger totalSupply;
 
     private Map<Address, BigInteger> balances = new HashMap<Address, BigInteger>();
     private Map<Address, Map<Address, BigInteger>> allowed = new HashMap<Address, Map<Address, BigInteger>>();
@@ -55,20 +56,11 @@ public class HenaToken extends LockMgr implements Contract, Token {
         this.name = name;
         this.symbol = symbol;
         this.decimals = 8;
-        totalSupply = initialAmount.multiply(BigInteger.TEN.pow(decimals));
+        this.totalSupply = initialAmount.multiply(BigInteger.TEN.pow(decimals));
         balances.put(new Address(owner), totalSupply);
         emit(new TransferEvent(null, Msg.sender(), totalSupply));
 
-
-        transfer(new Address("TTaqknUWcgomxKX6YPuaUkbZ1JygEMjV"), BigInteger.valueOf(Long.parseLong("30000000000")));
-        String[] starttime =  {"0","0","0"};
-        String[] endtime = {"1553859970000","1563859970000","1583859970000"};
-        String[] percent =  {"30","30","40"};
-        addLockArray(new Address("TTaqknUWcgomxKX6YPuaUkbZ1JygEMjV"), starttime, endtime, percent);
-
-        getLockState(new Address("TTaqknUWcgomxKX6YPuaUkbZ1JygEMjV"));
     }
-
 
     @Override
     @View
@@ -204,16 +196,32 @@ public class HenaToken extends LockMgr implements Contract, Token {
         return totalBalance.subtract(lockedBalance);
     }
 
-    public boolean addLockArray(@Required Address targetAddress, String[] startTime, String[] endTime, String[] persentage) {
+    public boolean addLockNormal(@Required Address targetAddress, String[] startTime, String[] endTime, String[] persentage) {
         requireManager(Msg.sender());
         check(balanceOf(targetAddress));
         require(startTime.length == endTime.length && startTime.length == persentage.length);
-
         for (int i = 0; i < startTime.length; i++) {
-            addLock(targetAddress, balanceOf(targetAddress), Long.parseLong(startTime[i]), Long.parseLong(endTime[i]), Integer.parseInt(persentage[i]));
+            addLock(LOCK_TYPE_NORMAL, targetAddress, balanceOf(targetAddress), Long.parseLong(startTime[i]), Long.parseLong(endTime[i]), Integer.parseInt(persentage[i]));
         }
 
         return true;
     }
+    protected boolean removeLockNormal(@Required Address targetAddress, @Required long endTime) {
+        requireManager(Msg.sender());
+        removeLock(LOCK_TYPE_NORMAL, targetAddress, endTime);
+        return true;
+    }
+
+    public boolean addLockStake(@Required String endTime, @Required BigInteger value) {
+        check(balanceOf(Msg.sender()));
+        check(value);
+        addLock(LOCK_TYPE_STAKE, Msg.sender(), value, Block.timestamp(), Long.parseLong(endTime), 100);
+        return true;
+    }
+    public boolean removeLockStake(@Required long endTime) {
+        removeLock(LOCK_TYPE_STAKE, Msg.sender(), endTime);
+        return true;
+    }
+
 
 }
